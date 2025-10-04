@@ -81,12 +81,20 @@ class FidelityParser {
      * @returns {Object|null} Parsed transaction/event or null if not applicable
      */
     parseRow(row) {
-        const transactionType = row['Transaction type']?.toLowerCase() || '';
-        const amount = parseFloat(row['Amount']) || 0;
-        const quantity = parseFloat(row['Quantity']) || 0;
+        const transactionType = (row['Transaction type'] || '').toLowerCase();
+        const amountRaw = row['Amount'];
+        const quantityRaw = row['Quantity'];
         const investment = row['Investments'] || '';
+
+        const parseNumberStrict = (v, fieldName) => {
+            const n = parseFloat(v);
+            if (!isFinite(n) || Number.isNaN(n)) {
+                throw new Error(`Invalid ${fieldName}: ${v}`);
+            }
+            return n;
+        };
         
-        // Skip non-transaction entries
+        // Skip non-transaction entries (safe to check these before numeric validation)
         if (transactionType.includes('cash in') || 
             transactionType.includes('cash out') ||
             transactionType.includes('transfer out') ||
@@ -95,21 +103,23 @@ class FidelityParser {
             transactionType.includes('cash in fees') ||
             transactionType.includes('cash out for buy') ||
             transactionType.includes('cash in from sell') ||
-            investment.toLowerCase() === 'cash' ||
-            quantity === 0) {
+            investment.toLowerCase() === 'cash') {
             return null;
         }
-        
-        // Handle buy transactions (positive amount, positive quantity)
-        if (amount > 0 && quantity > 0) {
-            return this.parseBuyTransaction(row);
-        }
-        
-        // Handle sell transactions (negative amount, negative quantity)
-        if (amount < 0 && quantity < 0) {
-            return this.parseSellTransaction(row);
-        }
-        
+
+        // For rows that are potentially relevant, validate numeric fields strictly.
+        // quantityRaw and amountRaw must parse to finite numbers.
+        const quantity = parseNumberStrict(quantityRaw, 'Quantity');
+        const amount = parseNumberStrict(amountRaw, 'Amount');
+
+        // If quantity is zero, treat as irrelevant and skip.
+        if (quantity === 0) return null;
+
+        // Decide BUY/SELL primarily from the sign of the quantity.
+        if (quantity > 0) return this.parseBuyTransaction(row);
+        if (quantity < 0) return this.parseSellTransaction(row);
+
+        // Shouldn't get here because quantity === 0 is handled above.
         return null;
     }
 
@@ -119,12 +129,28 @@ class FidelityParser {
      * @returns {Object} Buy transaction object
      */
     parseBuyTransaction(row) {
-        const date = this.formatDate(row['Completion date']);
+        const dateRaw = row['Completion date'];
+        const date = this.formatDate(dateRaw);
+        if (!date) throw new Error(`Invalid or missing Completion date: ${dateRaw}`);
+
         const asset = this.getAssetIdentifier(row);
-        const amount = Math.abs(parseFloat(row['Quantity']) || 0);
-        const price = parseFloat(row['Price per unit']) || 0;
+        if (!asset || asset.length === 0) throw new Error(`Invalid or missing Investments field: ${row['Investments']}`);
+
+        const quantityRaw = row['Quantity'];
+        const qty = parseFloat(quantityRaw);
+        if (!isFinite(qty) || Number.isNaN(qty) || qty <= 0) {
+            throw new Error(`Invalid Quantity for BUY: ${quantityRaw}`);
+        }
+        const amount = Math.abs(qty);
+
+        const priceRaw = row['Price per unit'];
+        const price = parseFloat(priceRaw);
+        if (!isFinite(price) || Number.isNaN(price) || price <= 0) {
+            throw new Error(`Invalid Price per unit for BUY: ${priceRaw}`);
+        }
+
         const expenses = this.calculateExpenses(row);
-        
+
         return {
             kind: 'BUY',
             date,
@@ -141,12 +167,28 @@ class FidelityParser {
      * @returns {Object} Sell transaction object
      */
     parseSellTransaction(row) {
-        const date = this.formatDate(row['Completion date']);
+        const dateRaw = row['Completion date'];
+        const date = this.formatDate(dateRaw);
+        if (!date) throw new Error(`Invalid or missing Completion date: ${dateRaw}`);
+
         const asset = this.getAssetIdentifier(row);
-        const amount = Math.abs(parseFloat(row['Quantity']) || 0);
-        const price = Math.abs(parseFloat(row['Price per unit']) || 0);
+        if (!asset || asset.length === 0) throw new Error(`Invalid or missing Investments field: ${row['Investments']}`);
+
+        const quantityRaw = row['Quantity'];
+        const qty = parseFloat(quantityRaw);
+        if (!isFinite(qty) || Number.isNaN(qty) || qty >= 0) {
+            throw new Error(`Invalid Quantity for SELL (expected negative): ${quantityRaw}`);
+        }
+        const amount = Math.abs(qty);
+
+        const priceRaw = row['Price per unit'];
+        const price = parseFloat(priceRaw);
+        if (!isFinite(price) || Number.isNaN(price) || price <= 0) {
+            throw new Error(`Invalid Price per unit for SELL: ${priceRaw}`);
+        }
+
         const expenses = this.calculateExpenses(row);
-        
+
         return {
             kind: 'SELL',
             date,

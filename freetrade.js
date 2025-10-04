@@ -125,11 +125,25 @@ class FreetradeParser {
     parseTransaction(row) {
         const buySell = row['Buy / Sell']?.toLowerCase();
         const kind = buySell === 'buy' ? 'BUY' : 'SELL';
-        
-        const date = this.formatDate(row['Timestamp']);
-        const asset = row['ISIN'] || row['Ticker'];
-        const amount = parseFloat(row['Quantity']) || 0;
-        const price = parseFloat(row['Price per Share in Account Currency']) || 0;
+        const dateRaw = row['Timestamp'];
+        const date = this.formatDate(dateRaw);
+        if (!date) throw new Error(`Invalid or missing Timestamp: ${dateRaw}`);
+
+        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
+        if (!asset) throw new Error(`Missing asset identifier (ISIN/Ticker) for transaction on ${dateRaw}`);
+
+        const qtyRaw = row['Quantity'];
+        const amount = parseFloat(qtyRaw);
+        if (!isFinite(amount) || Number.isNaN(amount) || amount === 0) {
+            throw new Error(`Invalid Quantity: ${qtyRaw}`);
+        }
+
+        const priceRaw = row['Price per Share in Account Currency'];
+        const price = parseFloat(priceRaw);
+        if (!isFinite(price) || Number.isNaN(price) || price <= 0) {
+            throw new Error(`Invalid Price per Share: ${priceRaw}`);
+        }
+
         const expenses = this.calculateExpenses(row);
         
         return {
@@ -148,10 +162,25 @@ class FreetradeParser {
      * @returns {Object} Dividend event object
      */
     parseDividend(row) {
-        const date = this.formatDate(row['Dividend Pay Date'] || row['Dividend Ex Date']);
-        const asset = row['ISIN'] || row['Ticker'];
-        const amount = parseFloat(row['Dividend Eligible Quantity']) || 0;
-        const value = parseFloat(row['Dividend Net Distribution Amount']) || 0;
+        const dateRaw = row['Dividend Pay Date'] || row['Dividend Ex Date'];
+        const date = this.formatDate(dateRaw);
+        if (!date) throw new Error(`Invalid or missing dividend date: ${dateRaw}`);
+
+        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
+        if (!asset) throw new Error(`Missing asset identifier for dividend on ${dateRaw}`);
+
+    const amountRaw = row['Dividend Eligible Quantity'];
+    const valueRaw = row['Dividend Net Distribution Amount'];
+
+    // If either critical dividend field is missing/empty, skip the row as
+    // it's not relevant for CGT (could be a reporting placeholder).
+    if (!amountRaw || !valueRaw) return null;
+
+    const amount = parseFloat(amountRaw);
+    if (!isFinite(amount) || Number.isNaN(amount) || amount === 0) return null;
+
+    const value = parseFloat(valueRaw);
+    if (!isFinite(value) || Number.isNaN(value)) return null;
         
         return {
             kind: 'DIVIDEND',
@@ -168,10 +197,20 @@ class FreetradeParser {
      * @returns {Object} Stock split event object
      */
     parseStockSplit(row) {
-        const date = this.formatDate(row['Stock Split Pay Date'] || row['Stock Split Ex Date']);
-        const asset = row['ISIN'] || row['Ticker'];
-        const rateFrom = parseFloat(row['Stock Split Rate of Share Outturn From']) || 1;
-        const rateTo = parseFloat(row['Stock Split Rate of Share Outturn To']) || 1;
+        const dateRaw = row['Stock Split Pay Date'] || row['Stock Split Ex Date'];
+        const date = this.formatDate(dateRaw);
+        if (!date) throw new Error(`Invalid or missing stock split date: ${dateRaw}`);
+
+        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
+        if (!asset) throw new Error(`Missing asset identifier for stock split on ${dateRaw}`);
+
+        const rateFromRaw = row['Stock Split Rate of Share Outturn From'];
+        const rateToRaw = row['Stock Split Rate of Share Outturn To'];
+        const rateFrom = parseFloat(rateFromRaw);
+        const rateTo = parseFloat(rateToRaw);
+        if (!isFinite(rateFrom) || !isFinite(rateTo) || rateFrom <= 0 || rateTo <= 0) {
+            throw new Error(`Invalid stock split rates: from=${rateFromRaw} to=${rateToRaw}`);
+        }
         
         // Determine if it's a split or unsplit based on the ratio
         const multiplier = rateTo / rateFrom;
@@ -191,10 +230,20 @@ class FreetradeParser {
      * @returns {Object} Capital return event object
      */
     parseCapitalReturn(row) {
-        const date = this.formatDate(row['Timestamp']);
-        const asset = row['ISIN'] || row['Ticker'];
-        const amount = parseFloat(row['Quantity']) || 0;
-        const value = parseFloat(row['Total Amount']) || 0;
+        const dateRaw = row['Timestamp'];
+        const date = this.formatDate(dateRaw);
+        if (!date) throw new Error(`Invalid or missing Timestamp for capital return: ${dateRaw}`);
+
+        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
+        if (!asset) throw new Error(`Missing asset identifier for capital return on ${dateRaw}`);
+
+        const amountRaw = row['Quantity'];
+        const amount = parseFloat(amountRaw);
+        if (!isFinite(amount) || Number.isNaN(amount)) throw new Error(`Invalid Quantity for capital return: ${amountRaw}`);
+
+        const valueRaw = row['Total Amount'];
+        const value = parseFloat(valueRaw);
+        if (!isFinite(value) || Number.isNaN(value)) throw new Error(`Invalid Total Amount for capital return: ${valueRaw}`);
         
         return {
             kind: 'CAPRETURN',

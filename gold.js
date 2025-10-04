@@ -61,11 +61,20 @@ class GoldParser {
             }
             
             const kind = summaryMatch[1].toUpperCase();
-            const quantity = parseFloat(summaryMatch[2].replace(/,/g, ''));
-            const pricePerKg = parseFloat(summaryMatch[3].replace(/,/g, ''));
-            const consideration = considerationMatch ? parseFloat(considerationMatch[1].replace(/,/g, '')) : 0;
-            const commission = commissionMatch ? parseFloat(commissionMatch[1].replace(/,/g, '')) : 0;
-            const total = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : 0;
+            const quantityRaw = summaryMatch[2].replace(/,/g, '');
+            const quantity = parseFloat(quantityRaw);
+            const priceRaw = summaryMatch[3].replace(/,/g, '');
+            const pricePerKg = parseFloat(priceRaw);
+            const consideration = considerationMatch ? parseFloat(considerationMatch[1].replace(/,/g, '')) : null;
+            const commission = commissionMatch ? parseFloat(commissionMatch[1].replace(/,/g, '')) : null;
+            const total = totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : null;
+
+            if (!isFinite(quantity) || Number.isNaN(quantity) || quantity === 0) {
+                throw new Error(`Invalid quantity parsed from email ${filePath}: ${quantityRaw}`);
+            }
+            if (!isFinite(pricePerKg) || Number.isNaN(pricePerKg) || pricePerKg <= 0) {
+                throw new Error(`Invalid price parsed from email ${filePath}: ${priceRaw}`);
+            }
             
             // Extract date from the 'Deal time' line (preferred). If that
             // fails, read the raw headers and parse the 'Date:' header. If

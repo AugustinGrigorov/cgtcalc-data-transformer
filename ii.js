@@ -64,7 +64,10 @@ class IIParser {
         // Get the actual date field (handle BOM in column names)
         const dateField = this.getDateField(row);
         const description = row['Description']?.toLowerCase() || '';
-        const quantity = parseFloat(row['Quantity']) || 0;
+    const quantityRaw = row['Quantity'];
+    // Treat missing or 'n/a' quantities as irrelevant rows
+    if (!quantityRaw || String(quantityRaw).toLowerCase() === 'n/a') return null;
+    const quantity = parseFloat(quantityRaw);
         const price = this.parsePrice(row['Price']);
         const debit = this.parseAmount(row['Debit']);
         const credit = this.parseAmount(row['Credit']);
@@ -79,11 +82,14 @@ class IIParser {
             return null;
         }
         
+        // Validate numeric fields for relevant rows
+        if (!isFinite(quantity) || Number.isNaN(quantity)) throw new Error(`Invalid Quantity: ${quantityRaw}`);
+
         // Handle buy transactions (positive quantity, debit amount)
         if (quantity > 0 && debit > 0) {
             return this.parseBuyTransaction(row, dateField);
         }
-        
+
         // Handle sell transactions (negative quantity, credit amount)
         if (quantity < 0 && credit > 0) {
             return this.parseSellTransaction(row, dateField);
@@ -112,9 +118,18 @@ class IIParser {
      */
     parseBuyTransaction(row, dateField) {
         const date = this.formatDate(dateField);
-        const asset = row['Sedol'] || row['Symbol'] || 'UNKNOWN';
-        const amount = Math.abs(parseFloat(row['Quantity']) || 0);
+        if (!date) throw new Error(`Invalid or missing date: ${dateField}`);
+
+        const asset = (row['Sedol'] || row['Symbol'] || '').trim();
+        if (!asset) throw new Error(`Missing asset identifier for buy on ${dateField}`);
+
+        const qtyRaw = row['Quantity'];
+        const amount = Math.abs(parseFloat(qtyRaw));
+        if (!isFinite(amount) || Number.isNaN(amount) || amount === 0) throw new Error(`Invalid Quantity for BUY: ${qtyRaw}`);
+
         const price = this.parsePrice(row['Price']);
+        if (!isFinite(price) || Number.isNaN(price) || price <= 0) throw new Error(`Invalid price for BUY: ${row['Price']}`);
+
         const expenses = this.calculateExpenses(row);
         
         return {
@@ -135,9 +150,18 @@ class IIParser {
      */
     parseSellTransaction(row, dateField) {
         const date = this.formatDate(dateField);
-        const asset = row['Sedol'] || row['Symbol'] || 'UNKNOWN';
-        const amount = Math.abs(parseFloat(row['Quantity']) || 0);
+        if (!date) throw new Error(`Invalid or missing date: ${dateField}`);
+
+        const asset = (row['Sedol'] || row['Symbol'] || '').trim();
+        if (!asset) throw new Error(`Missing asset identifier for sell on ${dateField}`);
+
+        const qtyRaw = row['Quantity'];
+        const amount = Math.abs(parseFloat(qtyRaw));
+        if (!isFinite(amount) || Number.isNaN(amount) || amount === 0) throw new Error(`Invalid Quantity for SELL: ${qtyRaw}`);
+
         const price = this.parsePrice(row['Price']);
+        if (!isFinite(price) || Number.isNaN(price) || price <= 0) throw new Error(`Invalid price for SELL: ${row['Price']}`);
+
         const expenses = this.calculateExpenses(row);
         
         return {
