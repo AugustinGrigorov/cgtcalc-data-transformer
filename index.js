@@ -1,10 +1,8 @@
 const FreetradeParser = require('./freetrade');
 const IIParser = require('./ii');
 const FidelityParser = require('./fidelity');
-const GoldParser = require('./gold');
+const BullionVaultParser = require('./bullionvault');
 const fs = require('fs');
-const path = require('path');
-
 /**
  * Sort transactions chronologically by date
  * @param {Array} transactions - Array of transaction strings
@@ -37,100 +35,77 @@ function sortTransactionsChronologically(transactions) {
  * - freetrade: Parse Freetrade CSV format
  * - ii: Parse Interactive Investor CSV format
  * - fidelity: Parse Fidelity CSV format
- * - gold: Parse gold transactions from email files
+ * - bullionvault: Parse BullionVault "Dealing advice" email files
  */
 async function main() {
     const args = process.argv.slice(2);
     
-    if (args.length < 1) {
-        console.error('Usage: node index.js <type> [filepath]');
-        console.error('Types: freetrade, ii, fidelity, gold');
-        console.error('Note: gold parser reads from email directory automatically');
-        process.exit(1);
+    if (args.length < 1) { 
+        throw new Error('Usage: node index.js <type> [filepath]\nTypes: freetrade, ii, fidelity, bullionvault\nNote: bullionvault parser reads from a folder of email files and requires a folder path');
     }
     
     const [type, filePath] = args;
     
-    // Check if file exists (skip for gold parser)
-    if (type.toLowerCase() !== 'gold' && filePath && !fs.existsSync(filePath)) {
-        console.error(`Error: File '${filePath}' does not exist`);
-        process.exit(1);
+    // Check if file exists (skip for bullionvault parser)
+    if (type.toLowerCase() !== 'bullionvault' && filePath && !fs.existsSync(filePath)) { 
+        throw new Error(`File '${filePath}' does not exist`);
     }
     
-    try {
-        let results = [];
-        
-        switch (type.toLowerCase()) {
-            case 'freetrade':
-                const freetradeParser = new FreetradeParser();
-                results = await freetradeParser.parseToFormat(filePath);
-                break;
-            case 'ii':
-                const iiParser = new IIParser();
-                results = await iiParser.parseToFormat(filePath);
-                break;
-            case 'fidelity':
-                const fidelityParser = new FidelityParser();
-                results = await fidelityParser.parseToFormat(filePath);
-                break;
-            case 'gold':
-                const goldParser = new GoldParser();
-                results = await goldParser.parseToFormat();
-                break;
-            default:
-                console.error(`Error: Unknown parser type '${type}'`);
-                console.error('Supported types: freetrade, ii, fidelity, gold');
-                process.exit(1);
-        }
-        
-        // Read existing transactions from data.txt
-        const outputPath = 'data.txt';
-        let existingTransactions = [];
-        if (fs.existsSync(outputPath)) {
-            const existingContent = fs.readFileSync(outputPath, 'utf8');
-            existingTransactions = existingContent.trim().split('\n').filter(line => line.trim());
-        }
-        
-        // Combine existing and new transactions
-        let allTransactions = [];
+    let results = [];
 
-        // If we're processing gold transactions, prefer the newly parsed gold
-        // results and drop any existing GOLD lines from the file (they may be
-        // stale placeholders or generated from a CSV without price info).
-        if (type.toLowerCase() === 'gold') {
-            const nonGold = existingTransactions.filter(line => {
-                const parts = line.trim().split(/\s+/);
-                // Expect format: KIND DATE ASSET ...
-                return parts[2] && parts[2].toUpperCase() !== 'GOLD';
-            });
-            allTransactions = [...nonGold, ...results];
-        } else {
-            allTransactions = [...existingTransactions, ...results];
-        }
-        
-        // Sort all transactions chronologically
-        const sortedTransactions = sortTransactionsChronologically(allTransactions);
-        
-        // Write all transactions back to data.txt in chronological order
-        const outputContent = sortedTransactions.join('\n') + '\n';
-        fs.writeFileSync(outputPath, outputContent);
-        
-        console.log(`Successfully parsed ${results.length} new transactions`);
-        console.log(`Total transactions: ${sortedTransactions.length} (all sorted chronologically)`);
-        console.log('Sample output:');
-        sortedTransactions.slice(0, 5).forEach(line => console.log(line));
-        if (sortedTransactions.length > 5) {
-            console.log(`... and ${sortedTransactions.length - 5} more transactions`);
-        }
-        
-    } catch (error) {
-        console.error('Error parsing file:', error.message);
-        process.exit(1);
+    switch (type.toLowerCase()) {
+        case 'freetrade':
+            const freetradeParser = new FreetradeParser();
+            results = await freetradeParser.parseToFormat(filePath);
+            break;
+        case 'ii':
+            const iiParser = new IIParser();
+            results = await iiParser.parseToFormat(filePath);
+            break;
+        case 'fidelity':
+            const fidelityParser = new FidelityParser();
+            results = await fidelityParser.parseToFormat(filePath);
+            break;
+        case 'bullionvault':
+            if (!filePath) {
+                throw new Error('bullionvault parser requires a folder path as the second argument');
+            }
+            if (!fs.existsSync(filePath) || !fs.lstatSync(filePath).isDirectory()) {
+                throw new Error(`Folder '${filePath}' does not exist or is not a directory`);
+            }
+            const bullionParser = new BullionVaultParser(filePath);
+            results = await bullionParser.parseToFormat();
+            break;
+        default:
+            throw new Error(`Unknown parser type '${type}'. Supported types: freetrade, ii, fidelity, bullionvault`);
+    }
+
+    // Read existing transactions from data.txt
+    const outputPath = 'data.txt';
+    let existingTransactions = [];
+    if (fs.existsSync(outputPath)) {
+        const existingContent = fs.readFileSync(outputPath, 'utf8');
+        existingTransactions = existingContent.trim().split('\n').filter(line => line.trim());
+    }
+
+    // Combine existing and new transactions
+    const allTransactions = [...existingTransactions, ...results];
+
+    // Sort all transactions chronologically
+    const sortedTransactions = sortTransactionsChronologically(allTransactions);
+
+    // Write all transactions back to data.txt in chronological order
+    const outputContent = sortedTransactions.join('\n') + '\n';
+    fs.writeFileSync(outputPath, outputContent);
+
+    console.log(`Successfully parsed ${results.length} new transactions`);
+    console.log(`Total transactions: ${sortedTransactions.length} (all sorted chronologically)`);
+    console.log('Sample output:');
+    sortedTransactions.slice(0, 5).forEach(line => console.log(line));
+    if (sortedTransactions.length > 5) {
+        console.log(`... and ${sortedTransactions.length - 5} more transactions`);
     }
 }
 
 // Run the CLI
-main().catch(error => {
-    console.error('Unexpected error:', error);
-    process.exit(1);
-});
+main();
