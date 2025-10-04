@@ -9,7 +9,6 @@ yarn-error.log*
 # Data files (user data, outputs)
 data/
 data.txt
-gold-transaction-emails/
 
 # OS files
 .DS_Store

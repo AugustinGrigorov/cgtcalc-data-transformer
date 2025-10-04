@@ -1,9 +1,9 @@
 {
-  "name": "taxes",
+  "name": "cgtcalc-data-transformer",
   "version": "1.0.0",
-  "description": "A utility to calculate taxes from transaction records",
-  "license": "ISC",
-  "author": "",
+  "description": "Convert broker CSVs and BullionVault emails into cgtcalc input format",
+  "license": "MIT",
+  "author": "Augustin Grigorov",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
