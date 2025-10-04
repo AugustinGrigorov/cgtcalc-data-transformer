@@ -99,13 +99,15 @@ class FidelityParser {
             transactionType.includes('cash out') ||
             transactionType.includes('transfer out') ||
             transactionType.includes('transfer to cash') ||
-            transactionType.includes('auto-sell for fees') ||
             transactionType.includes('cash in fees') ||
             transactionType.includes('cash out for buy') ||
             transactionType.includes('cash in from sell') ||
             investment.toLowerCase() === 'cash') {
             return null;
         }
+
+        // 'auto-sell for fees' reduces holdings and will be treated as a SELL
+        // because we determine BUY/SELL from the sign of the quantity below.
 
         // For rows that are potentially relevant, validate numeric fields strictly.
         // quantityRaw and amountRaw must parse to finite numbers.
