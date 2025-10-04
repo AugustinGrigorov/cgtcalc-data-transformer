@@ -1,0 +1,15 @@
+{
+  "name": "taxes",
+  "version": "1.0.0",
+  "description": "A utility to calculate taxes from transaction records",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "csv-parse": "^6.1.0"
+  }
+}
