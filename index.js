@@ -98,27 +98,15 @@ async function main() {
             throw new Error(`Unknown parser type '${type}'. Supported types: freetrade, ii, fidelity, bullionvault`);
     }
 
-    // Read existing transactions from data.txt
+    // Read existing transactions from data.txt and merge directly into a Set of trimmed strings.
     const outputPath = 'data.txt';
-    let existingTransactions = [];
-    if (fs.existsSync(outputPath)) {
-        const existingContent = fs.readFileSync(outputPath, 'utf8');
-        existingTransactions = existingContent.trim().split('\n').filter(line => line.trim());
-    }
+    // Build arrays of existing and incoming trimmed lines, then construct a Set for exact deduplication
+    const existingArr = fs.existsSync(outputPath)
+        ? fs.readFileSync(outputPath, 'utf8').split('\n').map(s => s && s.trim()).filter(Boolean)
+        : [];
 
-    // Merge existing and new transactions using a Set of trimmed strings.
-    const seen = new Set();
-
-    for (const line of existingTransactions) {
-        if (!line || typeof line !== 'string') continue;
-        seen.add(line.trim());
-    }
-
-    for (const line of results) {
-        if (!line || typeof line !== 'string') continue;
-        seen.add(line.trim());
-    }
-
+    // Use parser results directly (assumed to be an array of clean strings)
+    const seen = new Set([...existingArr, ...results]);
     const merged = Array.from(seen);
 
     // Sort merged transactions chronologically
