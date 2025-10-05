@@ -88,15 +88,27 @@ async function main() {
         existingTransactions = existingContent.trim().split('\n').filter(line => line.trim());
     }
 
-    // Combine existing and new transactions
-    const allTransactions = [...existingTransactions, ...results];
+    // Merge existing and new transactions using a Set of trimmed strings.
+    const seen = new Set();
 
-    // Sort all transactions chronologically
-    const sortedTransactions = sortTransactionsChronologically(allTransactions);
+    for (const line of existingTransactions) {
+        if (!line || typeof line !== 'string') continue;
+        seen.add(line.trim());
+    }
+
+    for (const line of results) {
+        if (!line || typeof line !== 'string') continue;
+        seen.add(line.trim());
+    }
+
+    const merged = Array.from(seen);
+
+    // Sort merged transactions chronologically
+    const sortedTransactions = sortTransactionsChronologically(merged);
 
     // Write all transactions back to data.txt in chronological order
     const outputContent = sortedTransactions.join('\n') + '\n';
-    fs.writeFileSync(outputPath, outputContent);
+    fs.writeFileSync(outputPath, outputContent, 'utf8');
 
     console.log(`Successfully parsed ${results.length} new transactions`);
     console.log(`Total transactions: ${sortedTransactions.length} (all sorted chronologically)`);
