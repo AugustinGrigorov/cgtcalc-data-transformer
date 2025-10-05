@@ -11,18 +11,25 @@ const fs = require('fs');
 function sortTransactionsChronologically(transactions) {
     return transactions.sort((a, b) => {
         // Extract date from transaction string (format: "BUY DD/MM/YYYY ...")
-        const dateA = a.split(' ')[1]; // Second field is the date
-        const dateB = b.split(' ')[1];
-        
-        if (!dateA || !dateB) return 0;
-        
-        // Convert DD/MM/YYYY to YYYY-MM-DD for proper sorting
-        const [dayA, monthA, yearA] = dateA.split('/');
-        const [dayB, monthB, yearB] = dateB.split('/');
-        
-        const dateObjA = new Date(`${yearA}-${monthA.padStart(2, '0')}-${dayA.padStart(2, '0')}`);
-        const dateObjB = new Date(`${yearB}-${monthB.padStart(2, '0')}-${dayB.padStart(2, '0')}`);
-        
+        const dateA = (a || '').split(' ')[1]; // Second field is the date
+        const dateB = (b || '').split(' ')[1];
+
+        // If any line is missing a date, fail fast — this is unrecoverable per user policy.
+        if (!dateA || !dateB) {
+            throw new Error(`Missing or unparseable date in transaction line. Line A: '${a}', Line B: '${b}'`);
+        }
+
+        const [dayA, monthA, yearA] = dateA.split('/').map(s => parseInt(s, 10));
+        const [dayB, monthB, yearB] = dateB.split('/').map(s => parseInt(s, 10));
+
+        if (!yearA || !monthA || !dayA || !yearB || !monthB || !dayB) {
+            throw new Error(`Unparsable date in transaction line. Line A: '${a}', Line B: '${b}'`);
+        }
+
+        // Use numeric Date constructor (year, monthIndex, day) — avoids string parsing issues
+        const dateObjA = new Date(yearA, monthA - 1, dayA);
+        const dateObjB = new Date(yearB, monthB - 1, dayB);
+
         return dateObjA - dateObjB;
     });
 }
