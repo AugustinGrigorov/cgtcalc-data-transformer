@@ -53,9 +53,26 @@ async function main() {
     
     const [type, filePath] = args;
     
-    // Check if file exists (skip for bullionvault parser)
-    if (type.toLowerCase() !== 'bullionvault' && filePath && !fs.existsSync(filePath)) { 
-        throw new Error(`File '${filePath}' does not exist`);
+    // Validate inputs. For most parsers we expect a file path; for bullionvault we expect
+    // a folder containing one or more .eml files. Fail fast if the path doesn't meet expectations.
+    const lowerType = type.toLowerCase();
+    if (lowerType === 'bullionvault') {
+        if (!filePath) {
+            throw new Error('bullionvault parser requires a folder path as the second argument');
+        }
+        if (!fs.existsSync(filePath) || !fs.lstatSync(filePath).isDirectory()) {
+            throw new Error(`Folder '${filePath}' does not exist or is not a directory`);
+        }
+        // Ensure there is at least one .eml file in the folder
+        const files = fs.readdirSync(filePath).filter(f => f.toLowerCase().endsWith('.eml'));
+        if (!files || files.length === 0) {
+            throw new Error(`Folder '${filePath}' does not contain any .eml files`);
+        }
+    } else {
+        // For non-bullionvault parsers, require a file path that exists
+        if (filePath && !fs.existsSync(filePath)) {
+            throw new Error(`File '${filePath}' does not exist`);
+        }
     }
     
     let results = [];
@@ -74,12 +91,6 @@ async function main() {
             results = await fidelityParser.parseToFormat(filePath);
             break;
         case 'bullionvault':
-            if (!filePath) {
-                throw new Error('bullionvault parser requires a folder path as the second argument');
-            }
-            if (!fs.existsSync(filePath) || !fs.lstatSync(filePath).isDirectory()) {
-                throw new Error(`Folder '${filePath}' does not exist or is not a directory`);
-            }
             const bullionParser = new BullionVaultParser(filePath);
             results = await bullionParser.parseToFormat();
             break;
