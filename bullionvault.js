@@ -10,20 +10,19 @@ const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:Security\{
 // Commission line: optional Security{...}, optional currency, then amount
 const COMMISSION_RE = /Commission:\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
 // Total cost / received / Total: optional currency + amount
-const TOTAL_RE = /(?:Total cost|Total received|Total):\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
+const TOTAL_RE = /(?:Total cost):\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
 // Capture the deal time line up to newline
 const DEALTIME_RE = /Deal time:\s*([^\r\n]+)/i;
 
 // Simple number parser to normalize commas and parse floats
 function parseNumber(str) {
-    if (typeof str !== 'string' && typeof str !== 'number') return NaN;
     return parseFloat(String(str).replace(/,/g, ''));
 }
 
 // Asset matchers used to detect GOLD / SILVER from Security line or body
 const ASSET_MATCHERS = [
-    { asset: 'GOLD', regex: /\b(gold|xau|gold kilos?)\b/i },
-    { asset: 'SILVER', regex: /\b(silver|xag|silver kilos?)\b/i },
+    { asset: 'GOLD', regex: /\b(gold?)\b/i },
+    { asset: 'SILVER', regex: /\b(silver?)\b/i },
 ];
 
 function detectAsset(text, filePath) {
