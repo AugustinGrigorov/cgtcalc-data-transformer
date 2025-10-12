@@ -7,7 +7,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Data files (user data, outputs)
-data/
+/data/
 data.txt
 
 # OS files

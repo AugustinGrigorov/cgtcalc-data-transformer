@@ -97,9 +97,8 @@ async function main() {
             const bullionParser = new BullionVaultParser();
             // Read all .eml files into an array of raw strings and pass to parser
             const emlFiles = fs.readdirSync(filePath).filter(f => f.toLowerCase().endsWith('.eml'));
-            const emlContents = emlFiles.map(f => fs.readFileSync(require('path').join(filePath, f), 'utf8'));
-            const parsedObjs = await bullionParser.parseContent(emlContents);
-            results = parsedObjs.map(tx => bullionParser.formatTransaction(tx));
+            const emlContents = emlFiles.map(f => fs.readFileSync(require('path').join(filePath, f), 'utf8')).join('\nEOF\n');
+            const results = await bullionParser.parseToFormat(emlContents);
             break;
         default:
             throw new Error(`Unknown parser type '${type}'. Supported types: freetrade, ii, fidelity, bullionvault`);

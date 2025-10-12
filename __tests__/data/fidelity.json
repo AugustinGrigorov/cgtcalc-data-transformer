@@ -1,0 +1,28 @@
+[
+  {
+    "name": "should parse BUY transaction correctly",
+    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n15 Jun 2023,16 Jun 2023,Buy,Test Investment Fund,Investment Account,AGXXXXXXXX,,2350.60,500,4.7012,REF123,Completed,",
+    "expected": [
+      "BUY 16/06/2023 Test_Investment_Fund 500 4.7012 0"
+    ]
+  },
+  {
+    "name": "should parse SELL transaction correctly",
+    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n20 Jun 2023,21 Jun 2023,Sell,Test Investment Fund,Investment Account,AGXXXXXXXX,,-9340.40,-2000,4.6702,REF456,Completed,",
+    "expected": [
+      "SELL 21/06/2023 Test_Investment_Fund 2000 4.6702 0"
+    ]
+  },
+  {
+    "name": "should handle header row correctly",
+    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n15 Jun 2023,16 Jun 2023,Buy,Test Fund,Investment Account,AGXXXXXXXX,,1000.00,100,10.00,REF789,Completed,",
+    "expected": [
+      "BUY 16/06/2023 Test_Fund 100 10 0"
+    ]
+  },
+  {
+    "name": "should filter out invalid transactions",
+    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n11 Oct 2021,14 Oct 2021,Cash In,Cash,Investment Account,AGXXXXXXXX,,8792.14,8792.14,1,511804286,Completed,\n\n11 Oct 2021,14 Oct 2021,Cash Out/Sell For Transfer,Test Fund,Investment Account,AGXXXXXXXX,,-8792.14,6972.36,1.26,511804285,Completed,",
+    "expected": []
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "name": "should parse GOLD BUY transaction correctly",
+    "input": "Date: Tue, 20 May 2025 21:02:22 +0000\n\nSubject: Dealing advice 10443663\n\n<html>\n\n<body>\n\n<p>\n\n=09Security: Fine gold kilos in London vault<br>\n\n=09Summary: Buy 0.012kg @ GBP 78,990.00/kg\n\n</p>\n\n<p>\n\n=09Deal time: May 20, 2025 at 9:59:30 PM BST\n\n=09Consideration: GBP 947.88\n\n=09Commission: GBP 4.74\n\n=09Total cost: GBP 952.62\n\n</p>\n\n</body>\n\n</html>",
+    "expected": [
+      "BUY 20/05/2025 GOLD 0.012 78990 4.74"
+    ]
+  },
+  {
+    "name": "should parse GOLD SELL transaction correctly",
+    "input": "Date: Mon, 15 Apr 2025 14:30:15 +0000\n\nSubject: Dealing advice 10443664\n\n<html>\n\n<body>\n\n<p>\n\n=09Security: Fine gold kilos in London vault<br>\n\n=09Summary: Sell 0.025kg @ GBP 76,700.00/kg\n\n</p>\n\n<p>\n\n=09Deal time: Apr 15, 2025 at 2:30:15 PM BST\n\n=09Consideration: GBP 1,917.50\n\n=09Commission: GBP 9.59\n\n=09Total received: GBP 1,907.91\n\n</p>\n\n</body>\n\n</html>",
+    "expected": [
+      "SELL 15/04/2025 GOLD 0.025 76700 9.59"
+    ]
+  },
+  {
+    "name": "should parse SILVER transaction correctly",
+    "input": "Date: Wed, 10 Mar 2025 11:45:30 +0000\n\nSubject: Dealing advice 10443665\n\n<html>\n\n<body>\n\n<p>\n\n=09Security: Fine silver kilos in London vault<br>\n\n=09Summary: Buy 1.5kg @ GBP 850.00/kg\n\n</p>\n\n<p>\n\n=09Deal time: Mar 10, 2025 at 11:45:30 AM BST\n\n=09Consideration: GBP 1,275.00\n\n=09Commission: GBP 6.38\n\n=09Total cost: GBP 1,281.38\n\n</p>\n\n</body>\n\n</html>",
+    "expected": [
+      "BUY 10/03/2025 SILVER 1.5 850 6.38"
+    ]
+  }
+]

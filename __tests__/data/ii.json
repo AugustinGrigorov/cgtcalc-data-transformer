@@ -1,0 +1,21 @@
+[
+  {
+    "name": "should parse BUY transaction correctly",
+    "input": "Date,Settlement Date,Symbol,Sedol,Quantity,Price,Description,Reference,Debit,Credit,Running Balance\n\n02/01/2024,04/01/2024,TEST,BKV0VZ0,37.91,109.62806,Buy TEST,REF-A,£4,160.00,,£13.28",
+    "expected": [
+      "BUY 02/01/2024 BKV0VZ0 37.91 109.62806 0"
+    ]
+  },
+  {
+    "name": "should parse SELL transaction correctly",
+    "input": "Date,Settlement Date,Symbol,Sedol,Quantity,Price,Description,Reference,Debit,Credit,Running Balance\n\n28/12/2023,03/01/2024,TEST,BYVGKV5,-1296.45,3.21898,Sell TEST,REF-B,,£4,173.27,£4,173.28",
+    "expected": [
+      "SELL 28/12/2023 BYVGKV5 1296.45 3.21898 0"
+    ]
+  },
+  {
+    "name": "should filter out invalid transactions",
+    "input": "Date,Settlement Date,Symbol,Sedol,Quantity,Price,Description,Reference,Debit,Credit,Running Balance\n\n10/10/2023,10/10/2023,n/a,n/a,n/a,n/a,Total Monthly Fee,REF-D,£11.99,,£-9.99\n\n10/10/2023,10/10/2023,n/a,n/a,n/a,n/a,Fee Transfer,REF-E,,£11.99,£2.00",
+    "expected": []
+  }
+]

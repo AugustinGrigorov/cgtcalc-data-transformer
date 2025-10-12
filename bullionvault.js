@@ -36,20 +36,13 @@ function detectAsset(text, filePath) {
  * Extracts gold transaction data from BullionVault email files
  */
 class BullionVaultParser {
-
-    // Backwards-compat parseFile helper: parse an array of email strings
-    async parseContent(emailStrings) {
-        if (!Array.isArray(emailStrings)) {
-            throw new Error('parseContent expects an array of email strings');
-        }
-        const results = [];
-        for (let i = 0; i < emailStrings.length; i++) {
-            const src = emailStrings[i];
-            const label = `email[${i}]`;
-            const tx = await this.parseEmailString(src, label);
-            if (tx) results.push(tx);
-        }
-        return results;
+    async parseToFormat(emailString) {
+        const emailStrings = emailString.split('\nEOF\n');
+        // parseEmailString is async; run them in parallel and wait for all to complete
+        const transactions = await Promise.all(
+            emailStrings.map((email, index) => this.parseEmailString(email, `email[${index}]`))
+        );
+        return transactions.map(transaction => this.formatTransaction(transaction));
     }
 
     // Parse a single email provided as a raw string. sourceLabel is used for error messages.
@@ -93,7 +86,7 @@ class BullionVaultParser {
 
             // Fail-fast: commission (expenses) must be present and numeric for bullionvault emails
             if (!isFinite(commission) || Number.isNaN(commission)) {
-                throw new Error(`Missing or unparsable commission/expenses in ${sourceLabel}`);
+     throw new Error(`Missing or unparsable commission/expenses in ${sourceLabel}`);
             }
 
             // Explicit asset matchers and detection helper
@@ -178,13 +171,6 @@ class BullionVaultParser {
             return `${transaction.kind} ${transaction.date} ${transaction.asset} ${transaction.amount} ${transaction.price} ${transaction.expenses}`;
         }
         return '';
-    }
-
-    // parseToFormat now accepts an array of raw email strings and returns formatted lines.
-    // This keeps all file I/O in index.js.
-    async parseToFormat(emailStrings) {
-        const transactions = await this.parseContent(emailStrings);
-        return transactions.map(transaction => this.formatTransaction(transaction));
     }
 
     decodeQuotedPrintable(str) {

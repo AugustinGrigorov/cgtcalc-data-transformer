@@ -1,5 +1,5 @@
 {
-  "name": "cgtcalc-data-transformer",
+ "name": "cgtcalc-data-transformer",
   "version": "1.0.0",
   "description": "Convert broker CSVs and BullionVault emails into cgtcalc input format",
   "license": "MIT",
@@ -7,9 +7,24 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   },
   "dependencies": {
     "csv-parse": "^6.1.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "*.js",
+      "!test-*.js",
+      "!run-all-tests.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
   }
 }
