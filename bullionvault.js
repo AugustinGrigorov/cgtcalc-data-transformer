@@ -1,6 +1,3 @@
-const fs = require('fs');
-const path = require('path');
-
 // --- Module-level regexes and helpers (kept simple and documented) ---
 // Match either 'Summary:' or 'Deal:' and capture Buy/Sell, quantity and price-per-kg
 const SUMMARY_OR_DEAL_RE = /(?:Summary|Deal):\s*(Buy|Sell)\s*([0-9.,]+)\s*kg\s*@[^/]*?([0-9,]+(?:\.[0-9]+)?)\s*\/kg/i;
@@ -39,36 +36,25 @@ function detectAsset(text, filePath) {
  * Extracts gold transaction data from BullionVault email files
  */
 class BullionVaultParser {
-    constructor(emailDirectory) {
-        if (!emailDirectory) {
-            throw new Error('BullionVaultParser requires an valid email directory');
-        }
-        this.emailDirectory = emailDirectory;
-    }
 
-    async parseAllEmails() {
+    // Backwards-compat parseFile helper: parse an array of email strings
+    async parseContent(emailStrings) {
+        if (!Array.isArray(emailStrings)) {
+            throw new Error('parseContent expects an array of email strings');
+        }
         const results = [];
-        const dir = this.emailDirectory;
-        const files = fs.readdirSync(dir);
-        const emailFiles = files.filter(file => file.endsWith('.eml'));
-
-        console.log(`Found ${emailFiles.length} email files to process in ${dir}...`);
-
-        for (const file of emailFiles) {
-            const filePath = path.join(dir, file);
-            const transaction = await this.parseEmailFile(filePath);
-            if (transaction) {
-                results.push(transaction);
-            }
+        for (let i = 0; i < emailStrings.length; i++) {
+            const src = emailStrings[i];
+            const label = `email[${i}]`;
+            const tx = await this.parseEmailString(src, label);
+            if (tx) results.push(tx);
         }
-
         return results;
     }
 
-    async parseEmailFile(filePath) {
-        let content = fs.readFileSync(filePath, 'utf8');
-
-            content = this.decodeQuotedPrintable(content);
+    // Parse a single email provided as a raw string. sourceLabel is used for error messages.
+    async parseEmailString(rawContent, sourceLabel) {
+            let content = this.decodeQuotedPrintable(rawContent);
             content = this.stripHtml(content);
 
             // Use module-level regexes and helpers (SUMMARY_OR_DEAL_RE, CONSIDERATION_RE, etc.)
@@ -84,7 +70,7 @@ class BullionVaultParser {
                 quantity = parseNumber(summaryOrDealMatch[2]);
                 pricePerKg = parseNumber(summaryOrDealMatch[3]);
             } else {
-                throw new Error(`Unparseable BullionVault email: missing Summary/Deal line in ${filePath}`);
+                throw new Error(`Unparseable BullionVault email: missing Summary/Deal line in ${sourceLabel}`);
             }
 
             const considerationCurrency = considerationMatch && considerationMatch[1] ? considerationMatch[1].toUpperCase() : null;
@@ -100,14 +86,14 @@ class BullionVaultParser {
             if (currencies.length > 0) {
                 for (const cur of currencies) {
                     if (cur !== 'GBP') {
-                        throw new Error(`Unsupported currency '${cur}' in ${filePath} — only GBP allowed`);
+                        throw new Error(`Unsupported currency '${cur}' in ${sourceLabel} — only GBP allowed`);
                     }
                 }
             }
 
             // Fail-fast: commission (expenses) must be present and numeric for bullionvault emails
             if (!isFinite(commission) || Number.isNaN(commission)) {
-                throw new Error(`Missing or unparsable commission/expenses in ${filePath}`);
+                throw new Error(`Missing or unparsable commission/expenses in ${sourceLabel}`);
             }
 
             // Explicit asset matchers and detection helper
@@ -118,27 +104,13 @@ class BullionVaultParser {
                 { asset: 'SILVER', regex: /\b(silver|xag|silver kilos?)\b/i },
             ];
 
-            function detectAsset(text) {
-                // Try Security: line first
-                const securityMatchLocal = text.match(/Security:\s*([^\r\n]+)/i);
-                const toCheck = securityMatchLocal ? securityMatchLocal[1] : text;
-                for (const m of ASSET_MATCHERS) {
-                    if (m.regex.test(toCheck)) return m.asset;
-                }
-                // Fallback: try the whole content for asset keywords
-                for (const m of ASSET_MATCHERS) {
-                    if (m.regex.test(text)) return m.asset;
-                }
-                throw new Error(`Unable to detect asset type (gold/silver) in ${filePath}`);
-            }
-
-            const assetDetected = detectAsset(content, filePath);
+            const assetDetected = detectAsset(content, sourceLabel);
 
             if (!isFinite(quantity) || Number.isNaN(quantity) || quantity === 0) {
-                throw new Error(`Invalid quantity parsed from email ${filePath}: ${quantity}`);
+                throw new Error(`Invalid quantity parsed from email ${sourceLabel}: ${quantity}`);
             }
             if (!isFinite(pricePerKg) || Number.isNaN(pricePerKg) || pricePerKg <= 0) {
-                throw new Error(`Invalid price parsed from email ${filePath}: ${pricePerKg}`);
+                throw new Error(`Invalid price parsed from email ${sourceLabel}: ${pricePerKg}`);
             }
             
             let date = null;
@@ -151,15 +123,14 @@ class BullionVaultParser {
             }
 
             if (!date) {
-                const raw = fs.readFileSync(filePath, 'utf8');
-                const headerDateMatch = raw.match(/^Date:\s*(.+)$/m);
+                const headerDateMatch = rawContent.match(/^Date:\s*(.+)$/m);
                 if (headerDateMatch) {
                     date = this.formatDate(headerDateMatch[1].trim());
                 }
             }
 
             if (!date) {
-                throw new Error(`No parsable date found in ${filePath}`);
+                throw new Error(`No parsable date found in ${sourceLabel}`);
             }
             
             return {
@@ -209,8 +180,10 @@ class BullionVaultParser {
         return '';
     }
 
-    async parseToFormat() {
-        const transactions = await this.parseAllEmails();
+    // parseToFormat now accepts an array of raw email strings and returns formatted lines.
+    // This keeps all file I/O in index.js.
+    async parseToFormat(emailStrings) {
+        const transactions = await this.parseContent(emailStrings);
         return transactions.map(transaction => this.formatTransaction(transaction));
     }
 

@@ -80,19 +80,26 @@ async function main() {
     switch (type.toLowerCase()) {
         case 'freetrade':
             const freetradeParser = new FreetradeParser();
-            results = await freetradeParser.parseToFormat(filePath);
+            const freetradeContent = fs.readFileSync(filePath, 'utf8');
+            results = await freetradeParser.parseToFormat(freetradeContent);
             break;
         case 'ii':
             const iiParser = new IIParser();
-            results = await iiParser.parseToFormat(filePath);
+            const iiContent = fs.readFileSync(filePath, 'utf8');
+            results = await iiParser.parseToFormat(iiContent);
             break;
         case 'fidelity':
             const fidelityParser = new FidelityParser();
-            results = await fidelityParser.parseToFormat(filePath);
+            const fidelityContent = fs.readFileSync(filePath, 'utf8');
+            results = await fidelityParser.parseToFormat(fidelityContent);
             break;
         case 'bullionvault':
-            const bullionParser = new BullionVaultParser(filePath);
-            results = await bullionParser.parseToFormat();
+            const bullionParser = new BullionVaultParser();
+            // Read all .eml files into an array of raw strings and pass to parser
+            const emlFiles = fs.readdirSync(filePath).filter(f => f.toLowerCase().endsWith('.eml'));
+            const emlContents = emlFiles.map(f => fs.readFileSync(require('path').join(filePath, f), 'utf8'));
+            const parsedObjs = await bullionParser.parseContent(emlContents);
+            results = parsedObjs.map(tx => bullionParser.formatTransaction(tx));
             break;
         default:
             throw new Error(`Unknown parser type '${type}'. Supported types: freetrade, ii, fidelity, bullionvault`);

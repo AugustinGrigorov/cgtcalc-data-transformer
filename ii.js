@@ -1,5 +1,4 @@
 const { parse } = require('csv-parse');
-const fs = require('fs');
 
 /**
  * Interactive Investor (ii) Parser
@@ -22,36 +21,30 @@ class IIParser {
         };
     }
 
+
     /**
-     * Parse CSV file and convert to standardized format
-     * @param {string} filePath - Path to CSV file
-     * @returns {Promise<Array>} Array of parsed transactions/events
+     * Parse CSV content string and return parsed transactions
+     * @param {string} content - CSV content as string
+     * @returns {Promise<Array>} parsed transactions
      */
-    async parseFile(filePath) {
+    async parseContent(content) {
         return new Promise((resolve, reject) => {
             const results = [];
-            
-            fs.createReadStream(filePath, { encoding: 'utf8' })
-                .pipe(parse({ 
-                    columns: true,
-                    skip_empty_lines: true,
-                    trim: true,
-                    relax_column_count: true,
-                    relax_quotes: true,
-                    bom: true  // Handle BOM
-                }))
-                .on('data', (row) => {
+            parse(content, { 
+                columns: true,
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true,
+                relax_quotes: true,
+                bom: true
+            }, (err, records) => {
+                if (err) return reject(err);
+                for (const row of records) {
                     const parsed = this.parseRow(row);
-                    if (parsed) {
-                        results.push(parsed);
-                    }
-                })
-                .on('end', () => {
-                    resolve(results);
-                })
-                .on('error', (error) => {
-                    reject(error);
-                });
+                    if (parsed) results.push(parsed);
+                }
+                resolve(results);
+            });
         });
     }
 
@@ -251,8 +244,8 @@ class IIParser {
      * @param {string} filePath - Path to CSV file
      * @returns {Promise<Array>} Array of formatted transaction strings
      */
-    async parseToFormat(filePath) {
-        const transactions = await this.parseFile(filePath);
+    async parseToFormat(content) {
+        const transactions = await this.parseContent(content);
         return transactions.map(transaction => this.formatTransaction(transaction));
     }
 }

@@ -1,5 +1,4 @@
 const { parse } = require('csv-parse');
-const fs = require('fs');
 
 /**
  * Freetrade Parser
@@ -55,35 +54,29 @@ class FreetradeParser {
         };
     }
 
+
     /**
-     * Parse CSV file and convert to standardized format
-     * @param {string} filePath - Path to CSV file
-     * @returns {Promise<Array>} Array of parsed transactions/events
+     * Parse CSV content string and convert to parsed transactions
+     * @param {string} content - CSV file content as string
+     * @returns {Promise<Array>} Array of parsed transaction objects
      */
-    async parseFile(filePath) {
+    async parseContent(content) {
         return new Promise((resolve, reject) => {
             const results = [];
-            
-            fs.createReadStream(filePath)
-                .pipe(parse({ 
-                    columns: true,
-                    skip_empty_lines: true,
-                    trim: true,
-                    relax_column_count: true,
-                    relax_quotes: true
-                }))
-                .on('data', (row) => {
+            parse(content, { 
+                columns: true,
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true,
+                relax_quotes: true
+            }, (err, records) => {
+                if (err) return reject(err);
+                for (const row of records) {
                     const parsed = this.parseRow(row);
-                    if (parsed) {
-                        results.push(parsed);
-                    }
-                })
-                .on('end', () => {
-                    resolve(results);
-                })
-                .on('error', (error) => {
-                    reject(error);
-                });
+                    if (parsed) results.push(parsed);
+                }
+                resolve(results);
+            });
         });
     }
 
@@ -301,13 +294,14 @@ class FreetradeParser {
     }
 
     /**
-     * Parse CSV and return formatted transaction strings
-     * @param {string} filePath - Path to CSV file
-     * @returns {Promise<Array>} Array of formatted transaction strings
+     * Parse CSV content and return formatted transaction strings
+     * @param {string} content - CSV content as a string
+     * @returns {Promise<Array<string>>} Array of formatted transaction strings
      */
-    async parseToFormat(filePath) {
-        const transactions = await this.parseFile(filePath);
-        return transactions.map(transaction => this.formatTransaction(transaction));
+    async parseToFormat(content) {
+        // content is a CSV string
+        const transactions = await this.parseContent(content);
+        return transactions.map(transaction => this.formatTransaction(transaction)).filter(Boolean);
     }
 }
 

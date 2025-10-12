@@ -1,5 +1,4 @@
 const { parse } = require('csv-parse');
-const fs = require('fs');
 
 /**
  * Fidelity Parser
@@ -23,55 +22,33 @@ class FidelityParser {
         };
     }
 
+
     /**
-     * Parse CSV file and convert to standardized format
-     * @param {string} filePath - Path to CSV file
-     * @returns {Promise<Array>} Array of parsed transactions/events
+     * Parse CSV content and return parsed transactions
+     * @param {string} content - CSV content as string
+     * @returns {Promise<Array>} parsed transactions
      */
-    async parseFile(filePath) {
+    async parseContent(content) {
         return new Promise((resolve, reject) => {
             const results = [];
-            let headerFound = false;
-            
-            fs.createReadStream(filePath, { encoding: 'utf8' })
-                .pipe(parse({ 
-                    columns: [
-                        'Order date',
-                        'Completion date', 
-                        'Transaction type',
-                        'Investments',
-                        'Product Wrapper',
-                        'Account Number',
-                        'Source investment',
-                        'Amount',
-                        'Quantity',
-                        'Price per unit',
-                        'Reference Number',
-                        'Status'
-                    ],
-                    skip_empty_lines: true,
-                    trim: true,
-                    relax_column_count: true,
-                    relax_quotes: true,
-                    from_line: 8  // Skip the header rows and start from the actual data
-                }))
-                .on('data', (row) => {
-                    // Skip the header row if it exists
-                    if (row['Order date'] === 'Order date') {
-                        return;
-                    }
-                    
+            parse(content, { 
+                columns: [
+                    'Order date','Completion date','Transaction type','Investments','Product Wrapper','Account Number','Source investment','Amount','Quantity','Price per unit','Reference Number','Status'
+                ],
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true,
+                relax_quotes: true,
+                from_line: 8
+            }, (err, records) => {
+                if (err) return reject(err);
+                for (const row of records) {
+                    if (row['Order date'] === 'Order date') continue;
                     const parsed = this.parseRow(row);
-                    if (parsed) {
-                        results.push(parsed);
-                    }
-                })
-                .on('end', () => {
-                    resolve(results);
-                })
-                .on('error', (error) => {
-                    reject(error);
-                });
+                    if (parsed) results.push(parsed);
+                }
+                resolve(results);
+            });
         });
     }
 
@@ -292,8 +269,8 @@ class FidelityParser {
      * @param {string} filePath - Path to CSV file
      * @returns {Promise<Array>} Array of formatted transaction strings
      */
-    async parseToFormat(filePath) {
-        const transactions = await this.parseFile(filePath);
+    async parseToFormat(content) {
+        const transactions = await this.parseContent(content);
         return transactions.map(transaction => this.formatTransaction(transaction));
     }
 }
