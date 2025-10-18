@@ -20,4 +20,12 @@
       "BUY 10/03/2025 SILVER 1.5 850 6.38"
     ]
   }
+  ,
+  {
+    "name": "should parse SILVER SELL transaction correctly",
+    "input": "Date: Fri, 21 Feb 2025 09:15:00 +0000\n\nSubject: Dealing advice 10444000\n\n<html>\n\n<body>\n\n<p>\n\n=09Security: Fine silver kilos in London vault<br>\n\n=09Summary: Sell 0.75kg @ GBP 880.00/kg\n\n</p>\n\n<p>\n\n=09Deal time: Feb 21, 2025 at 9:14:30 AM BST\n\n=09Consideration: GBP 660.00\n\n=09Commission: GBP 3.30\n\n=09Total received: GBP 656.70\n\n</p>\n\n</body>\n\n</html>",
+    "expected": [
+      "SELL 21/02/2025 SILVER 0.75 880 3.3"
+    ]
+  }
 ]
