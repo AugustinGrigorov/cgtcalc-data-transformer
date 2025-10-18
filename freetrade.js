@@ -1,6 +1,31 @@
 const { parse } = require('csv-parse');
 
 /**
+ * IMPORTANT: Omitted parsing and manual review note
+ * ------------------------------------------------
+ * This parser intentionally omits parsing for the following row types:
+ *  - DIVIDEND
+ *  - CAPITAL / CAPITAL RETURN
+ *  - STOCK SPLIT / UNSPLIT
+ *
+ * Rationale:
+ *  - DIVIDEND and CAPITAL rows are ambiguous: they may be dividends
+ *    from individual stocks, distributions from income-class funds,
+ *    retained distributions from accumulation-class funds (which can
+ *    affect disposals), or simply bookkeeping/cash adjustments.
+ *  - STOCK SPLIT rows are not consistently present or reliably formed
+ *    in the provided Freetrade CSV data.
+ *  - The CSV provides no reliable signal to distinguish share-class
+ *    semantics (income vs accumulation) or to identify whether a row
+ *    pertains to a fund versus an account-level event.
+ *
+ * Because of these ambiguities and the project's strict fail-fast
+ * policy, dividend, capital-return and split rows must be reviewed and
+ * handled manually when relevant. This parser only extracts explicit
+ * BUY/SELL order rows and will ignore the omitted types.
+ */
+
+/**
  * Freetrade Parser
  * Converts Freetrade CSV format to standardized transaction format
  */
@@ -54,15 +79,6 @@ class FreetradeParser {
         };
     }
 
-    // IMPORTANT: Stock split parsing intentionally omitted
-    // --------------------------------------------------
-    // Fact: stock-split rows are missing from the provided
-    // Freetrade CSV data. There are no explicit, reliably-
-    // formed stock-split event rows to parse. Per the project's
-    // strict fail-fast policy we will not attempt heuristic
-    // extraction. If explicit split rows are later provided,
-    // the parsing method can be reintroduced.
-
     /**
      * Parse CSV content string and convert to parsed transactions
      * @param {string} content - CSV file content as string
@@ -101,16 +117,6 @@ class FreetradeParser {
         if (type === 'order' && (buySell === 'buy' || buySell === 'sell')) {
             return this.parseTransaction(row);
         }
-        
-        // Handle asset events
-        if (type === 'dividend' || type === 'special_dividend') {
-            return this.parseDividend(row);
-        }
-        
-        if (type === 'capital' || type === 'capital return') {
-            return this.parseCapitalReturn(row);
-        }
-        
         return null;
     }
 
@@ -154,71 +160,6 @@ class FreetradeParser {
     }
 
     /**
-     * Parse dividend events
-     * @param {Object} row - CSV row
-     * @returns {Object} Dividend event object
-     */
-    parseDividend(row) {
-        const dateRaw = row['Dividend Pay Date'] || row['Dividend Ex Date'];
-        const date = this.formatDate(dateRaw);
-        if (!date) throw new Error(`Invalid or missing dividend date: ${dateRaw}`);
-
-        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
-        if (!asset) throw new Error(`Missing asset identifier for dividend on ${dateRaw}`);
-
-    const amountRaw = row['Dividend Eligible Quantity'];
-    const valueRaw = row['Dividend Net Distribution Amount'];
-
-    // If either critical dividend field is missing/empty, skip the row as
-    // it's not relevant for CGT (could be a reporting placeholder).
-    if (!amountRaw || !valueRaw) return null;
-
-    const amount = parseFloat(amountRaw);
-    if (!isFinite(amount) || Number.isNaN(amount) || amount === 0) return null;
-
-    const value = parseFloat(valueRaw);
-    if (!isFinite(value) || Number.isNaN(value)) return null;
-        
-        return {
-            kind: 'DIVIDEND',
-            date,
-            asset,
-            amount,
-            value
-        };
-    }
-
-    /**
-     * Parse capital return events
-     * @param {Object} row - CSV row
-     * @returns {Object} Capital return event object
-     */
-    parseCapitalReturn(row) {
-        const dateRaw = row['Timestamp'];
-        const date = this.formatDate(dateRaw);
-        if (!date) throw new Error(`Invalid or missing Timestamp for capital return: ${dateRaw}`);
-
-        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
-        if (!asset) throw new Error(`Missing asset identifier for capital return on ${dateRaw}`);
-
-        const amountRaw = row['Quantity'];
-        const amount = parseFloat(amountRaw);
-        if (!isFinite(amount) || Number.isNaN(amount)) throw new Error(`Invalid Quantity for capital return: ${amountRaw}`);
-
-        const valueRaw = row['Total Amount'];
-        const value = parseFloat(valueRaw);
-        if (!isFinite(value) || Number.isNaN(value)) throw new Error(`Invalid Total Amount for capital return: ${valueRaw}`);
-        
-        return {
-            kind: 'CAPRETURN',
-            date,
-            asset,
-            amount,
-            value
-        };
-    }
-
-    /**
      * Calculate total expenses for a transaction
      * @param {Object} row - CSV row
      * @returns {number} Total expenses
@@ -235,17 +176,15 @@ class FreetradeParser {
      * @returns {string} Formatted date
      */
     formatDate(dateString) {
-        if (!dateString) return '';
-        
-        try {
-            const date = new Date(dateString);
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        } catch (error) {
-            return dateString; // Return original if parsing fails
-        }
+        if (!dateString) throw new Error('Missing Timestamp');
+
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) throw new Error(`Invalid Timestamp: ${dateString}`);
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     }
 
     /**
@@ -256,10 +195,6 @@ class FreetradeParser {
     formatTransaction(transaction) {
         if (transaction.kind === 'BUY' || transaction.kind === 'SELL') {
             return `${transaction.kind} ${transaction.date} ${transaction.asset} ${transaction.amount} ${transaction.price} ${transaction.expenses}`;
-        } else if (transaction.kind === 'DIVIDEND' || transaction.kind === 'CAPRETURN') {
-            return `${transaction.kind} ${transaction.date} ${transaction.asset} ${transaction.amount} ${transaction.value}`;
-        } else if (transaction.kind === 'SPLIT' || transaction.kind === 'UNSPLIT') {
-            return `${transaction.kind} ${transaction.date} ${transaction.asset} ${transaction.multiplier}`;
         }
         return '';
     }

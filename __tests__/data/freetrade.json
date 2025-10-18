@@ -14,20 +14,6 @@
     ]
   },
   {
-    "name": "should parse DIVIDEND transaction correctly",
-    "input": "Title,Type,Timestamp,Account Currency,Total Amount,Buy / Sell,Ticker,ISIN,Price per Share in Account Currency,Stamp Duty,Quantity,Venue,Order ID,Order Type,Instrument Currency,Total Shares Amount,Price per Share,FX Rate,Base FX Rate,FX Fee (BPS),FX Fee Amount,Dividend Ex Date,Dividend Pay Date,Dividend Eligible Quantity,Dividend Amount Per Share,Dividend Gross Distribution Amount,Dividend Net Distribution Amount,Dividend Withheld Tax Percentage,Dividend Withheld Tax Amount,Stock Split Ex Date,Stock Split Pay Date,Stock Split New ISIN,Stock Split Rate of Share Outturn From,Stock Split Rate of Share Outturn To,Stock Split Maintain Holding of Initial ISIN,Stock Split New Share Quantity,Stock Split Rate of Cash Outturn Amount,Stock Split Rate of Cash Outturn Currency,Stock Split Cash Outturn Received Amount,Stock Split Has Fractional Payout,Stock Split Rate of Fractional Payout Amount,Stock Split Rate of Fractional Payout Currency,Stock Split Fractional Payout Cash Received Amount,Stock Split Fractional Payout Cash Received Currency\nQualcomm,DIVIDEND,2025-09-25T11:30:00.000Z,GBP,2.82,,QCOM,US7475251036,,,5.02410185,,,,USD,,,,0.74429683,0,0.00,2025-09-04,2025-09-25,5.02410185,0.89000000,4.47,3.80,15,0.67,,,,,,,,,,,,,,,",
-    "expected": [
-      "DIVIDEND 25/09/2025 US7475251036 5.02410185 3.8"
-    ]
-  },
-  {
-    "name": "should parse CAPITAL_RETURN transaction correctly",
-    "input": "Title,Type,Timestamp,Account Currency,Total Amount,Buy / Sell,Ticker,ISIN,Price per Share in Account Currency,Stamp Duty,Quantity,Venue,Order ID,Order Type,Instrument Currency,Total Shares Amount,Price per Share,FX Rate,Base FX Rate,FX Fee (BPS),FX Fee Amount,Dividend Ex Date,Dividend Pay Date,Dividend Eligible Quantity,Dividend Amount Per Share,Dividend Gross Distribution Amount,Dividend Net Distribution Amount,Dividend Withheld Tax Percentage,Dividend Withheld Tax Amount,Stock Split Ex Date,Stock Split Pay Date,Stock Split New ISIN,Stock Split Rate of Share Outturn From,Stock Split Rate of Share Outturn To,Stock Split Maintain Holding of Initial ISIN,Stock Split New Share Quantity,Stock Split Rate of Cash Outturn Amount,Stock Split Rate of Cash Outturn Currency,Stock Split Cash Outturn Received Amount,Stock Split Has Fractional Payout,Stock Split Rate of Fractional Payout Amount,Stock Split Rate of Fractional Payout Currency,Stock Split Fractional Payout Cash Received Amount,Stock Split Fractional Payout Cash Received Currency\nSQM ADR,CAPITAL,2025-10-02T19:53:00.000Z,GBP,0.15,,SQM,US8336351056,,,4.26942836,,,,USD,,,,0.74160320,0,0.00,2024-05-09,2025-10-02,4.26942836,0.04852100,0.21,0.21,0,0.00,,,,,,,,,,,,,,,",
-    "expected": [
-      "CAPRETURN 02/10/2025 US8336351056 4.26942836 0.15"
-    ]
-  },
-  {
     "name": "should filter out invalid transactions",
     "input": "Title,Type,Timestamp,Account Currency,Total Amount,Buy / Sell,Ticker,ISIN,Price per Share in Account Currency,Stamp Duty,Quantity,Venue,Order ID,Order Type,Instrument Currency,Total Shares Amount,Price per Share,FX Rate,Base FX Rate,FX Fee (BPS),FX Fee Amount,Dividend Ex Date,Dividend Pay Date,Dividend Eligible Quantity,Dividend Amount Per Share,Dividend Gross Distribution Amount,Dividend Net Distribution Amount,Dividend Withheld Tax Percentage,Dividend Withheld Tax Amount,Stock Split Ex Date,Stock Split Pay Date,Stock Split New ISIN,Stock Split Rate of Share Outturn From,Stock Split Rate of Share Outturn To,Stock Split Maintain Holding of Initial ISIN,Stock Split New Share Quantity,Stock Split Rate of Cash Outturn Amount,Stock Split Rate of Cash Outturn Currency,Stock Split Cash Outturn Received Amount,Stock Split Has Fractional Payout,Stock Split Rate of Fractional Payout Amount,Stock Split Rate of Fractional Payout Currency,Stock Split Fractional Payout Cash Received Amount,Stock Split Fractional Payout Cash Received Currency\nSeptember Statement,MONTHLY_STATEMENT,2025-10-01T00:00:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,",
     "expected": []
