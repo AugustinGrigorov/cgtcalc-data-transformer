@@ -54,6 +54,14 @@ class FreetradeParser {
         };
     }
 
+    // IMPORTANT: Stock split parsing intentionally omitted
+    // --------------------------------------------------
+    // Fact: stock-split rows are missing from the provided
+    // Freetrade CSV data. There are no explicit, reliably-
+    // formed stock-split event rows to parse. Per the project's
+    // strict fail-fast policy we will not attempt heuristic
+    // extraction. If explicit split rows are later provided,
+    // the parsing method can be reintroduced.
 
     /**
      * Parse CSV content string and convert to parsed transactions
@@ -97,10 +105,6 @@ class FreetradeParser {
         // Handle asset events
         if (type === 'dividend' || type === 'special_dividend') {
             return this.parseDividend(row);
-        }
-        
-        if (type === 'stock split') {
-            return this.parseStockSplit(row);
         }
         
         if (type === 'capital' || type === 'capital return') {
@@ -181,39 +185,6 @@ class FreetradeParser {
             asset,
             amount,
             value
-        };
-    }
-
-    /**
-     * Parse stock split events
-     * @param {Object} row - CSV row
-     * @returns {Object} Stock split event object
-     */
-    parseStockSplit(row) {
-        const dateRaw = row['Stock Split Pay Date'] || row['Stock Split Ex Date'];
-        const date = this.formatDate(dateRaw);
-        if (!date) throw new Error(`Invalid or missing stock split date: ${dateRaw}`);
-
-        const asset = (row['ISIN'] || row['Ticker'] || '').trim();
-        if (!asset) throw new Error(`Missing asset identifier for stock split on ${dateRaw}`);
-
-        const rateFromRaw = row['Stock Split Rate of Share Outturn From'];
-        const rateToRaw = row['Stock Split Rate of Share Outturn To'];
-        const rateFrom = parseFloat(rateFromRaw);
-        const rateTo = parseFloat(rateToRaw);
-        if (!isFinite(rateFrom) || !isFinite(rateTo) || rateFrom <= 0 || rateTo <= 0) {
-            throw new Error(`Invalid stock split rates: from=${rateFromRaw} to=${rateToRaw}`);
-        }
-        
-        // Determine if it's a split or unsplit based on the ratio
-        const multiplier = rateTo / rateFrom;
-        const kind = multiplier > 1 ? 'SPLIT' : 'UNSPLIT';
-        
-        return {
-            kind,
-            date,
-            asset,
-            multiplier: multiplier.toFixed(2)
         };
     }
 
