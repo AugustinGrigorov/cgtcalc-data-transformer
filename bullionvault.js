@@ -46,94 +46,75 @@ class BullionVaultParser {
     }
 
     // Parse a single email provided as a raw string. sourceLabel is used for error messages.
-    async parseEmailString(rawContent, sourceLabel) {
-            let content = this.decodeQuotedPrintable(rawContent);
-            content = this.stripHtml(content);
+    async parseEmailString(content, sourceLabel) {
+        // Use module-level regexes and helpers (SUMMARY_OR_DEAL_RE, CONSIDERATION_RE, etc.)
+        const summaryOrDealMatch = content.match(SUMMARY_OR_DEAL_RE);
+        const considerationMatch = content.match(CONSIDERATION_RE);
+        const commissionMatch = content.match(COMMISSION_RE);
+        const totalMatch = content.match(TOTAL_RE);
+        const dealTimeMatch = content.match(DEALTIME_RE);
+        const kind = summaryOrDealMatch[1].toUpperCase();
+        const quantity = parseNumber(summaryOrDealMatch[2]);
+        const pricePerKg = parseNumber(summaryOrDealMatch[3]);
+        const considerationCurrency = considerationMatch && considerationMatch[1] ? considerationMatch[1].toUpperCase() : null;
+        const commissionCurrency = commissionMatch && commissionMatch[1] ? commissionMatch[1].toUpperCase() : null;
+        const totalCurrency = totalMatch && totalMatch[1] ? totalMatch[1].toUpperCase() : null;
 
-            // Use module-level regexes and helpers (SUMMARY_OR_DEAL_RE, CONSIDERATION_RE, etc.)
-            const summaryOrDealMatch = content.match(SUMMARY_OR_DEAL_RE);
-            const considerationMatch = content.match(CONSIDERATION_RE);
-            const commissionMatch = content.match(COMMISSION_RE);
-            const totalMatch = content.match(TOTAL_RE);
-            const dealTimeMatch = content.match(DEALTIME_RE);
-            
-            let kind, quantity, pricePerKg;
-            if (summaryOrDealMatch) {
-                kind = summaryOrDealMatch[1].toUpperCase();
-                quantity = parseNumber(summaryOrDealMatch[2]);
-                pricePerKg = parseNumber(summaryOrDealMatch[3]);
-            } else {
-                throw new Error(`Unparseable BullionVault email: missing Summary/Deal line in ${sourceLabel}`);
-            }
+        const commission = commissionMatch ? parseNumber(commissionMatch[2]) : null;
 
-            const considerationCurrency = considerationMatch && considerationMatch[1] ? considerationMatch[1].toUpperCase() : null;
-            const commissionCurrency = commissionMatch && commissionMatch[1] ? commissionMatch[1].toUpperCase() : null;
-            const totalCurrency = totalMatch && totalMatch[1] ? totalMatch[1].toUpperCase() : null;
-
-            const consideration = considerationMatch ? parseNumber(considerationMatch[2]) : null;
-            const commission = commissionMatch ? parseNumber(commissionMatch[2]) : null;
-            const total = totalMatch ? parseNumber(totalMatch[2]) : null;
-
-            // Fail-fast: commissions/consideration must be in GBP for this dataset. If any present currency is not GBP, fail.
-            const currencies = [considerationCurrency, commissionCurrency, totalCurrency].filter(Boolean);
-            if (currencies.length > 0) {
-                for (const cur of currencies) {
-                    if (cur !== 'GBP') {
-                        throw new Error(`Unsupported currency '${cur}' in ${sourceLabel} — only GBP allowed`);
-                    }
+        // Fail-fast: commissions/consideration must be in GBP for this dataset. If any present currency is not GBP, fail.
+        const currencies = [considerationCurrency, commissionCurrency, totalCurrency].filter(Boolean);
+        if (currencies.length > 0) {
+            for (const cur of currencies) {
+                if (cur !== 'GBP') {
+                    throw new Error(`Unsupported currency '${cur}' in ${sourceLabel} — only GBP allowed`);
                 }
             }
+        }
 
-            // Fail-fast: commission (expenses) must be present and numeric for bullionvault emails
-            if (!isFinite(commission) || Number.isNaN(commission)) {
-     throw new Error(`Missing or unparsable commission/expenses in ${sourceLabel}`);
-            }
+        // Fail-fast: commission (expenses) must be present and numeric for bullionvault emails
+        if (!isFinite(commission) || Number.isNaN(commission)) {
+            throw new Error(`Missing or unparsable commission/expenses in ${sourceLabel}`);
+        }
 
-            // Explicit asset matchers and detection helper
-            const ASSET_MATCHERS = [
-                // Match explicit gold tokens and common tickers
-                { asset: 'GOLD', regex: /\b(gold|xau|gold kilos?)\b/i },
-                // Match explicit silver tokens and common tickers
-                { asset: 'SILVER', regex: /\b(silver|xag|silver kilos?)\b/i },
-            ];
+        // Explicit asset matchers and detection helper
+        const ASSET_MATCHERS = [
+            // Match explicit gold tokens and common tickers
+            { asset: 'GOLD', regex: /\b(gold|gold kilos?)\b/i },
+            // Match explicit silver tokens and common tickers
+            { asset: 'SILVER', regex: /\b(silver|silver kilos?)\b/i },
+        ];
 
-            const assetDetected = detectAsset(content, sourceLabel);
+        const assetDetected = detectAsset(content, sourceLabel);
 
-            if (!isFinite(quantity) || Number.isNaN(quantity) || quantity === 0) {
-                throw new Error(`Invalid quantity parsed from email ${sourceLabel}: ${quantity}`);
-            }
-            if (!isFinite(pricePerKg) || Number.isNaN(pricePerKg) || pricePerKg <= 0) {
-                throw new Error(`Invalid price parsed from email ${sourceLabel}: ${pricePerKg}`);
-            }
-            
-            let date = null;
+        if (!isFinite(quantity) || Number.isNaN(quantity) || quantity === 0) {
+            throw new Error(`Invalid quantity parsed from email ${sourceLabel}: ${quantity}`);
+        }
+        if (!isFinite(pricePerKg) || Number.isNaN(pricePerKg) || pricePerKg <= 0) {
+            throw new Error(`Invalid price parsed from email ${sourceLabel}: ${pricePerKg}`);
+        }
 
-            if (dealTimeMatch) {
-                const dtRaw = dealTimeMatch[1].trim();
-                const dtPartMatch = dtRaw.match(/([A-Za-z]+\s+\d{1,2},\s*\d{4}(?:\s+at\s+[^G]+GMT)?|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/i);
-                const dtForFormat = dtPartMatch ? dtPartMatch[1] : dtRaw;
-                date = this.formatDate(dtForFormat.trim());
-            }
+        let date = null;
 
-            if (!date) {
-                const headerDateMatch = rawContent.match(/^Date:\s*(.+)$/m);
-                if (headerDateMatch) {
-                    date = this.formatDate(headerDateMatch[1].trim());
-                }
-            }
+        if (dealTimeMatch) {
+            const dtRaw = dealTimeMatch[1].trim();
+            const dtPartMatch = dtRaw.match(/([A-Za-z]+\s+\d{1,2},\s*\d{4}(?:\s+at\s+[^G]+GMT)?|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/i);
+            const dtForFormat = dtPartMatch ? dtPartMatch[1] : dtRaw;
+            date = this.formatDate(dtForFormat.trim());
+        }
 
-            if (!date) {
-                throw new Error(`No parsable date found in ${sourceLabel}`);
-            }
-            
-            return {
-                kind,
-                date,
-                asset: assetDetected,
-                amount: quantity,
-                price: pricePerKg,
-                expenses: commission
-            };
+        if (!date) {
+            throw new Error(`No parsable date found in ${sourceLabel}`);
+        }
+
+        return {
+            kind,
+            date,
+            asset: assetDetected,
+            amount: quantity,
+            price: pricePerKg,
+            expenses: commission
+        };
 
     }
 
@@ -170,30 +151,7 @@ class BullionVaultParser {
         if (transaction.kind === 'BUY' || transaction.kind === 'SELL') {
             return `${transaction.kind} ${transaction.date} ${transaction.asset} ${transaction.amount} ${transaction.price} ${transaction.expenses}`;
         }
-        return '';
-    }
-
-    decodeQuotedPrintable(str) {
-        if (typeof str !== 'string') throw new Error('decodeQuotedPrintable expected a string');
-        // Remove soft line breaks
-        let out = str.replace(/=\r?\n/g, '');
-        // Decode hex escapes =HH
-        out = out.replace(/=([0-9A-F]{2})/gi, (m, hex) => {
-            return String.fromCharCode(parseInt(hex, 16));
-        });
-        return out;
-    }
-
-    stripHtml(html) {
-        if (typeof html !== 'string') throw new Error('stripHtml expected a string');
-        let txt = html.replace(/<[^>]*>/g, '');
-        txt = txt.replace(/&nbsp;/gi, ' ');
-        txt = txt.replace(/&amp;/gi, '&');
-        txt = txt.replace(/&lt;/gi, '<');
-        txt = txt.replace(/&gt;/gi, '>');
-        txt = txt.replace(/\s+/g, ' ').trim();
-        if (!txt) throw new Error('stripHtml resulted in empty string');
-        return txt;
+        throw new Error(`Unsupported transaction kind: ${transaction.kind}`);
     }
 
 }
