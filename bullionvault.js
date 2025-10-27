@@ -3,11 +3,10 @@
 const SUMMARY_OR_DEAL_RE = /(?:Summary|Deal):\s*(Buy|Sell)\s*([0-9.,]+)\s*kg\s*@[^/]*?([0-9,]+(?:\.[0-9]+)?)\s*\/kg/i;
 
 // Match consideration / net consideration lines: optional Security{...}, optional 3-letter currency, then amount
-const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
+// const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
+const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:.*=')?([A-Z]{3})(?:'})?\s([0-9,]+(?:\.[0-9]+)?)/i;
 // Commission line: optional Security{...}, optional currency, then amount
-const COMMISSION_RE = /Commission:\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
-// Total cost / received / Total: optional currency + amount
-const TOTAL_RE = /(?:Total cost):\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
+const COMMISSION_RE = /(?:Commission):\s*(?:.*=')?([A-Z]{3})(?:'})?\s([0-9,]+(?:\.[0-9]+)?)/i;
 // Capture the deal time line up to newline
 const DEALTIME_RE = /Deal time:\s*([^\r\n]+)/i;
 
@@ -51,24 +50,20 @@ class BullionVaultParser {
         const summaryOrDealMatch = content.match(SUMMARY_OR_DEAL_RE);
         const considerationMatch = content.match(CONSIDERATION_RE);
         const commissionMatch = content.match(COMMISSION_RE);
-        const totalMatch = content.match(TOTAL_RE);
         const dealTimeMatch = content.match(DEALTIME_RE);
         const kind = summaryOrDealMatch[1].toUpperCase();
         const quantity = parseNumber(summaryOrDealMatch[2]);
         const pricePerKg = parseNumber(summaryOrDealMatch[3]);
-        const considerationCurrency = considerationMatch && considerationMatch[1] ? considerationMatch[1].toUpperCase() : null;
-        const commissionCurrency = commissionMatch && commissionMatch[1] ? commissionMatch[1].toUpperCase() : null;
-        const totalCurrency = totalMatch && totalMatch[1] ? totalMatch[1].toUpperCase() : null;
+        const considerationCurrency = considerationMatch[1].toUpperCase();
+        const commissionCurrency = commissionMatch[1].toUpperCase();
 
-        const commission = commissionMatch ? parseNumber(commissionMatch[2]) : null;
+        const commission = parseNumber(commissionMatch[2]);
 
         // Fail-fast: commissions/consideration must be in GBP for this dataset. If any present currency is not GBP, fail.
-        const currencies = [considerationCurrency, commissionCurrency, totalCurrency].filter(Boolean);
-        if (currencies.length > 0) {
-            for (const cur of currencies) {
-                if (cur !== 'GBP') {
-                    throw new Error(`Unsupported currency '${cur}' in ${sourceLabel} — only GBP allowed`);
-                }
+        const currencies = [considerationCurrency, commissionCurrency].filter(Boolean);
+        for (const cur of currencies) {
+            if (cur !== 'GBP') {
+                throw new Error(`Unsupported currency '${cur}' in ${sourceLabel} — only GBP allowed`);
             }
         }
 
