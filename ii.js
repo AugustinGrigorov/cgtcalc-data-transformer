@@ -60,7 +60,6 @@ class IIParser {
     parseRow(row) {
         const dateField = row['Settlement Date'];
         if (!dateField) throw new Error('Missing settlement date value');
-        const q = Number(row['Quantity']);
 
         // Parse values directly, assume fields are present. If not, let operations throw.
         // Determine BUY/SELL strictly from Debit/Credit presence.

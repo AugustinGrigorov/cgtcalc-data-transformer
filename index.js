@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 const FreetradeParser = require('./freetrade');
 const IIParser = require('./ii');
 const FidelityParser = require('./fidelity');

@@ -77,14 +77,6 @@ class BullionVaultParser {
             throw new Error(`Missing or unparsable commission/expenses in ${sourceLabel}`);
         }
 
-        // Explicit asset matchers and detection helper
-        const ASSET_MATCHERS = [
-            // Match explicit gold tokens and common tickers
-            { asset: 'GOLD', regex: /\b(gold|gold kilos?)\b/i },
-            // Match explicit silver tokens and common tickers
-            { asset: 'SILVER', regex: /\b(silver|silver kilos?)\b/i },
-        ];
-
         const assetDetected = detectAsset(content, sourceLabel);
 
         if (!isFinite(quantity) || Number.isNaN(quantity) || quantity === 0) {
