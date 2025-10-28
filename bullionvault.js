@@ -1,9 +1,6 @@
-// --- Module-level regexes and helpers (kept simple and documented) ---
 // Match either 'Summary:' or 'Deal:' and capture Buy/Sell, quantity and price-per-kg
 const SUMMARY_OR_DEAL_RE = /(?:Summary|Deal):\s*(Buy|Sell)\s*([0-9.,]+)\s*kg\s*@[^/]*?([0-9,]+(?:\.[0-9]+)?)\s*\/kg/i;
-
 // Match consideration / net consideration lines: optional Security{...}, optional 3-letter currency, then amount
-// const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:Security\{[^}]*\}\s*)?(?:([A-Z]{3})\s*)?([0-9,]+(?:\.[0-9]+)?)/i;
 const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:.*=')?([A-Z]{3})(?:'})?\s([0-9,]+(?:\.[0-9]+)?)/i;
 // Commission line: optional Security{...}, optional currency, then amount
 const COMMISSION_RE = /(?:Commission):\s*(?:.*=')?([A-Z]{3})(?:'})?\s([0-9,]+(?:\.[0-9]+)?)/i;
@@ -23,12 +20,10 @@ const ASSET_MATCHERS = [
 
 function detectAsset(text, filePath) {
     const securityMatchLocal = text.match(/Security:\s*([^\r\n]+)/i);
-    const toCheck = securityMatchLocal ? securityMatchLocal[1] : text;
+    const toCheck = securityMatchLocal[1];
     for (const m of ASSET_MATCHERS) if (m.regex.test(toCheck)) return m.asset;
-    for (const m of ASSET_MATCHERS) if (m.regex.test(text)) return m.asset;
     throw new Error(`Unable to detect asset type (gold/silver) in ${filePath}`);
 }
-
 
 /**
  * BullionVault Email Parser
@@ -56,7 +51,6 @@ class BullionVaultParser {
         const pricePerKg = parseNumber(summaryOrDealMatch[3]);
         const considerationCurrency = considerationMatch[1].toUpperCase();
         const commissionCurrency = commissionMatch[1].toUpperCase();
-
         const commission = parseNumber(commissionMatch[2]);
 
         // Fail-fast: commissions/consideration must be in GBP for this dataset. If any present currency is not GBP, fail.
