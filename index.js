@@ -112,9 +112,7 @@ async function main() {
         ? fs.readFileSync(outputPath, 'utf8').split('\n').map(s => s && s.trim()).filter(Boolean)
         : [];
 
-    // Use parser results directly (assumed to be an array of clean strings)
-    const seen = new Set([...existingArr, ...results]);
-    const merged = Array.from(seen);
+    const merged = [...existingArr, ...results];
 
     // Sort merged transactions chronologically
     const sortedTransactions = sortTransactionsChronologically(merged);
