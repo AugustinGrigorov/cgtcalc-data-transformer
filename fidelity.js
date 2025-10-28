@@ -164,7 +164,7 @@ class FidelityParser {
             throw new Error(`Invalid Price per unit for SELL: ${priceRaw}`);
         }
 
-        const expenses = this.calculateExpenses(row);
+        const expenses = 0; // Fidelity CSV does not provide explicit expenses/commission for sells
 
         return {
             kind: 'SELL',
