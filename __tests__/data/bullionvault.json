@@ -28,4 +28,12 @@
       "SELL 21/02/2025 SILVER 0.75 880 3.3"
     ]
   }
+  ,
+  {
+    "name": "should parse deal time without comma and with timezone abbreviation",
+    "input": "Date: Sat, 21 Aug 2019 11:23:26 +0000\n\nSubject: Dealing advice 8015601\n\n<html>\n\n<body>\n\n<p>\n\n=09Security: Fine gold kilos in London vault<br>\n\n=09Summary: Buy 0.002kg @ GBP 40,070.00/kg\n\n</p>\n\n<p>\n\n=09Deal time: 21 August 2019 11:23:26 BST\n\n=09Consideration: GBP 80.14\n\n=09Commission: GBP 0.41\n\n=09Total cost: GBP 80.55\n\n</p>\n\n</body>\n\n</html>",
+    "expected": [
+      "BUY 21/08/2019 GOLD 0.002 40070 0.41"
+    ]
+  }
 ]

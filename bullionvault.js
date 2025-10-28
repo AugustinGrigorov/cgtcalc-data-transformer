@@ -5,7 +5,7 @@ const CONSIDERATION_RE = /(?:Net\s+consideration|Consideration):\s*(?:.*=')?([A-
 // Commission line: optional Security{...}, optional currency, then amount
 const COMMISSION_RE = /(?:Commission):\s*(?:.*=')?([A-Z]{3})(?:'})?\s([0-9,]+(?:\.[0-9]+)?)/i;
 // Capture the deal time line up to newline
-const DEALTIME_RE = /Deal time:\s*([^\r\n]+)/i;
+const DEALTIME_RE = /Deal time:\s*([^\r\n]+)(?:<br>)?/i;
 
 // Simple number parser to normalize commas and parse floats
 function parseNumber(str) {
@@ -78,10 +78,8 @@ class BullionVaultParser {
         let date = null;
 
         if (dealTimeMatch) {
-            const dtRaw = dealTimeMatch[1].trim();
-            const dtPartMatch = dtRaw.match(/([A-Za-z]+\s+\d{1,2},\s*\d{4}(?:\s+at\s+[^G]+GMT)?|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/i);
-            const dtForFormat = dtPartMatch ? dtPartMatch[1] : dtRaw;
-            date = this.formatDate(dtForFormat.trim());
+            const dealTime = dealTimeMatch[1].trim();
+            date = this.formatDate(dealTime);
         }
 
         if (!date) {
@@ -100,32 +98,17 @@ class BullionVaultParser {
     }
 
     formatDate(dateString) {
-        if (!dateString || typeof dateString !== 'string') {
-            throw new Error(`formatDate expected a non-empty string, got: ${typeof dateString}`);
-        }
-
-        const cleanDate = dateString.trim();
         // Normalize: remove stray 'at' tokens and common timezone abbreviations so parsing is unified
-        const normalized = cleanDate.replace(/\bat\b/gi, '').replace(/\b(GMT|UTC|BST)\b/gi, '').trim();
-
-        const date = new Date(normalized);
-        if (!isNaN(date.getTime())) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
+        const normalized = dateString.replace(/\bat\b\s/gi, '');
+        let date = new Date(normalized);
+        if (isNaN(date.getTime())) {
+            const dateSegments = dateString.split(' ');
+            date = new Date(`${dateSegments[1]} ${dateSegments[0]}, ${dateSegments[2]}`);
         }
-
-        const dateMatch = cleanDate.match(/(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i);
-        if (dateMatch) {
-            const day = dateMatch[1].padStart(2, '0');
-            const monthName = dateMatch[2];
-            const year = dateMatch[3];
-            const monthNum = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
-            return `${day}/${String(monthNum).padStart(2, '0')}/${year}`;
-        }
-
-        throw new Error(`Unparsable date string: '${dateString}'`);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     }
 
     formatTransaction(transaction) {
