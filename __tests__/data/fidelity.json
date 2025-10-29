@@ -8,7 +8,7 @@
   },
   {
     "name": "should parse SELL transaction correctly",
-    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n20 Jun 2023,21 Jun 2023,Sell,Test Investment Fund,Investment Account,AGXXXXXXXX,,-9340.40,-2000,4.6702,REF456,Completed,",
+    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n20 Jun 2023,21 Jun 2023,Sell,Test Investment Fund,Investment Account,AGXXXXXXXX,,-9340.40,2000,4.6702,REF456,Completed,",
     "expected": [
       "SELL 21/06/2023 Test_Investment_Fund 2000 4.6702 0"
     ]
@@ -22,7 +22,7 @@
   },
   {
     "name": "should filter out invalid transactions",
-    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n11 Oct 2021,14 Oct 2021,Cash In,Cash,Investment Account,AGXXXXXXXX,,8792.14,8792.14,1,511804286,Completed,\n\n11 Oct 2021,14 Oct 2021,Cash Out/Sell For Transfer,Test Fund,Investment Account,AGXXXXXXXX,,-8792.14,6972.36,1.26,511804285,Completed,",
+    "input": "\n\n\n\n\n\n\nOrder date,Completion date,Transaction type,Investments,Product Wrapper,Account Number,Source investment,Amount,Quantity,Price per unit,Reference Number,Status,\n\n11 Oct 2021,14 Oct 2021,Cash In,Cash,Investment Account,AGXXXXXXXX,,8792.14,8792.14,1,511804286,Completed,\n\n11 Oct 2021,14 Oct 2021,Transfer Out,Test Fund,Investment Account,AGXXXXXXXX,,-8792.14,6972.36,1.26,511804285,Completed,",
     "expected": []
   }
 ]
